@@ -34,7 +34,15 @@ async function request<T>(
   const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || res.statusText);
+    let msg = text || res.statusText;
+    try {
+      const j = JSON.parse(text) as { detail?: string | Array<{ msg?: string }> };
+      if (typeof j.detail === 'string') msg = j.detail;
+      else if (Array.isArray(j.detail) && j.detail[0]?.msg) msg = String(j.detail[0].msg);
+    } catch {
+      // use raw text
+    }
+    throw new Error(msg);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
